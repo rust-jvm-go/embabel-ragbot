@@ -5,7 +5,6 @@ import com.embabel.agent.api.annotation.EmbabelComponent;
 import com.embabel.agent.api.common.ActionContext;
 import com.embabel.agent.rag.service.SearchOperations;
 import com.embabel.agent.rag.tools.ToolishRag;
-import com.embabel.agent.rag.tools.TryHyDE;
 import com.embabel.chat.Conversation;
 import com.embabel.chat.UserMessage;
 
@@ -25,9 +24,8 @@ public class ChatActions {
             RagbotProperties properties) {
         this.toolishRag = new ToolishRag(
                 "sources",
-                "The music criticism written by Robert Schumann: His own writings",
-                searchOperations)
-                .withHint(TryHyDE.usingConversationContext());
+                "Classic music criticism",
+                searchOperations);
         this.properties = properties;
     }
 

@@ -52,14 +52,14 @@ The model configured in `application.yml` determines which key is required. The 
    ```
    ingest https://www.gutenberg.org/files/56208/56208-h/56208-h.htm
    ```
-5. Start chatting:
+5. Start chatting. Change the port if you wish:
    ```
-   chat
+   uichat 8888
    ```
 
 ### Why Old Music Criticism?
 
-While you can ingest any content into this RAG demo, the default content is historical music criticism: [Robert Schumann](https://en.wikipedia.org/wiki/Robert_Schumann)'s writings (1830s-1850s) and [Philip Hale](https://en.wikipedia.org/wiki/Philip_Hale_(critic))'s Boston Symphony program notes (early 1900s). This choice is deliberate: **obscure historical content ensures the LLM must actually use RAG** rather than relying on general knowledge. _Also, Rod Johnson has a PhD in musicology and loves this stuff!_
+While you can ingest any content into this RAG app, the default content is historical music criticism: [Robert Schumann](https://en.wikipedia.org/wiki/Robert_Schumann)'s writings (1830s-1850s) and [Philip Hale](https://en.wikipedia.org/wiki/Philip_Hale_(critic))'s Boston Symphony program notes (early 1900s). This choice is deliberate: **obscure historical content ensures the LLM must actually use RAG** rather than relying on general knowledge. _Also, Rod Johnson has a PhD in musicology and loves this stuff._
 
 If you ingested Wikipedia articles about Java or common tech topics, the LLM could answer most questions from its training data alone, making it hard to verify that RAG is working. With Schumann's opinions on Chopin's nocturnes or Hale's commentary on Meyerbeer, the LLM has no choice but to search the indexed content - giving you clear evidence that retrieval is happening.
 
@@ -73,7 +73,6 @@ What does Schumann say about Chopin's nocturnes?
 
 # Cross-source comparison (requires ingesting both sources)
 Compare Hale and Schumann's opinions of Liszt
-How do the two critics differ in their assessment of virtuosity?
 ```
 
 These questions demonstrate agentic RAG in action - the LLM will make multiple searches, synthesize information across chunks, and cite specific passages from the criticism.

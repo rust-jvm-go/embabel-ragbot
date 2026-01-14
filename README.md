@@ -17,7 +17,7 @@
 # Ragbot - RAG-Powered Chatbot Example
 
 This project demonstrates Retrieval-Augmented Generation (RAG) using Embabel Agent with Apache Lucene for vector storage
-and Spring Shell for interaction.
+and Spring Shell or a simple [Javelit](https://javelit.io/) UI for interaction.
 
 ## Getting Started
 
@@ -44,20 +44,24 @@ The model configured in `application.yml` determines which key is required. The 
    ```bash
    ./scripts/shell.sh
    ```
-3. Ingest a document:
+3. Ingest the default document ([Robert Schumann](https://en.wikipedia.org/wiki/Robert_Schumann)'s music criticism):
    ```
    ingest
    ```
-4. Start chatting:
+4. Optionally, ingest [Philip Hale](https://en.wikipedia.org/wiki/Philip_Hale_(critic))'s Boston Symphony program notes for cross-source comparison:
+   ```
+   ingest https://www.gutenberg.org/files/56208/56208-h/56208-h.htm
+   ```
+5. Start chatting:
    ```
    chat
    ```
 
 ### Why Old Music Criticism?
 
-While you can ingest any content into this RAG demo, the default content is historical music criticism: Robert Schumann's writings (1830s-1850s) and Philip Hale's Boston Symphony program notes (early 1900s). This choice is deliberate: **obscure historical content ensures the LLM must actually use RAG** rather than relying on general knowledge.
+While you can ingest any content into this RAG demo, the default content is historical music criticism: [Robert Schumann](https://en.wikipedia.org/wiki/Robert_Schumann)'s writings (1830s-1850s) and [Philip Hale](https://en.wikipedia.org/wiki/Philip_Hale_(critic))'s Boston Symphony program notes (early 1900s). This choice is deliberate: **obscure historical content ensures the LLM must actually use RAG** rather than relying on general knowledge. _Also, Rod Johnson has a PhD in musicology and loves this stuff!_
 
-If you ingested Wikipedia articles about Python or common tech topics, the LLM could answer most questions from its training data alone, making it hard to verify that RAG is working. With Schumann's opinions on Chopin's nocturnes or Hale's commentary on Meyerbeer, the LLM has no choice but to search the indexed content - giving you clear evidence that retrieval is happening.
+If you ingested Wikipedia articles about Java or common tech topics, the LLM could answer most questions from its training data alone, making it hard to verify that RAG is working. With Schumann's opinions on Chopin's nocturnes or Hale's commentary on Meyerbeer, the LLM has no choice but to search the indexed content - giving you clear evidence that retrieval is happening.
 
 **Example questions to try:**
 
@@ -473,29 +477,29 @@ See [Configuration Reference](#configuration-reference) for all available settin
 
 ### Creating a Custom Objective and Persona
 
-This section walks through creating a new chatbot configuration from scratch, using a film critic example.
+This section walks through creating a new chatbot configuration from scratch, using a music critic example.
 
 #### Step 1: Create the Objective Template
 
 The objective defines *what* the chatbot should accomplish. Create a new file at:
 
 ```
-src/main/resources/prompts/objectives/discuss_films.jinja
+src/main/resources/prompts/objectives/music.jinja
 ```
 
 Example content based on existing objectives:
 
 ```jinja
-Answer questions about classic cinema and film history in a clear and engaging manner.
+Answer questions about classical music and music history in a clear and engaging manner.
 
-The tools available to you access a curated collection of film reviews and criticism.
+The tools available to you access a curated collection of music criticism and program notes.
 You must always use these tools to find answers, as your general knowledge will not extend to everything in the collection
 and these tools allow you to find detailed analysis if you try hard enough.
 
-Always back up your points with direct quotes from the film criticism sources.
+Always back up your points with direct quotes from the music criticism sources.
 
 You may find that the result from one tool call leads to a search for another tool,
-e.g. a result mentioning "as discussed in the analysis of Citizen Kane..." might lead to a search for "Citizen Kane analysis".
+e.g. a result mentioning "as discussed in the review of Chopin's nocturnes..." might lead to a search for "Chopin nocturnes".
 
 DO NOT RELY ON GENERAL KNOWLEDGE unless you are certain a better answer is not in the provided sources.
 ```
@@ -505,16 +509,16 @@ DO NOT RELY ON GENERAL KNOWLEDGE unless you are certain a better answer is not i
 The persona defines *how* the chatbot communicates. Create a new file at:
 
 ```
-src/main/resources/prompts/personas/film_critic.jinja
+src/main/resources/prompts/personas/music-guide.jinja
 ```
 
 Example content based on existing personas:
 
 ```jinja
-Your name is Cinephile.
-You are a passionate film critic with deep knowledge of cinema history.
-You want to share your love of films with others and help them appreciate the art of filmmaking.
-You speak with enthusiasm about cinematography, direction, and storytelling.
+Your name is Maestro.
+You are a passionate music critic with deep knowledge of classical music history.
+You want to share your love of music with others and help them appreciate the art of composition.
+You speak with enthusiasm about harmony, orchestration, and musical interpretation.
 ```
 
 #### Step 3: Update the Directory Structure
@@ -529,13 +533,11 @@ src/main/resources/prompts/
 │   └── personalization.jinja
 ├── personas/
 │   ├── clause.jinja
-│   ├── music-guide.jinja
-│   ├── film_critic.jinja          # NEW
+│   ├── music-guide.jinja          # NEW
 │   └── ...
 └── objectives/
     ├── legal.jinja
-    ├── music.jinja
-    ├── discuss_films.jinja         # NEW
+    ├── music.jinja                 # NEW
     └── ...
 ```
 
@@ -549,7 +551,7 @@ public ChatActions(
         RagbotProperties properties) {
     this.toolishRag = new ToolishRag(
             "sources",
-            "Film reviews and criticism: Classic cinema analysis and reviews",  // Updated description
+            "Music criticism and program notes: Historical perspectives on classical music",  // Updated description
             searchOperations)
             .withHint(TryHyDE.usingConversationContext());
     this.properties = properties;
@@ -560,26 +562,23 @@ The description should briefly explain what content the RAG store contains, help
 
 #### Step 5: Ingest Your Content
 
-Use the `ingest-directory` command to load a directory of markdown or text files:
+Use the `ingest` command to load content:
 
 ```bash
 # Start the shell
 ./scripts/shell.sh
 
-# Ingest a directory of film reviews (markdown or text files)
-ingest-directory /path/to/film-reviews
+# Ingest Schumann's music criticism (default)
+ingest
+
+# Ingest Philip Hale's Boston Symphony program notes
+ingest https://www.gutenberg.org/files/56208/56208-h/56208-h.htm
 
 # Verify content was indexed
 chunks
 ```
 
-The `ingest-directory` command recursively processes all `.md` and `.txt` files in the specified directory, chunking them for vector storage.
-
-You can also ingest content directly from URLs. For example, to add Philip Hale's Boston Symphony program notes:
-
-```bash
-ingest https://www.gutenberg.org/files/56208/56208-h/56208-h.htm
-```
+You can also use `ingest-directory` to load a directory of markdown or text files for larger collections.
 
 #### Step 6: Configure application.yml
 
@@ -588,22 +587,22 @@ Finally, update your configuration to use the new objective and persona:
 ```yaml
 ragbot:
   voice:
-    persona: film_critic           # References personas/film_critic.jinja
+    persona: music-guide           # References personas/music-guide.jinja
     max-words: 50
 
-  objective: discuss_films         # References objectives/discuss_films.jinja
+  objective: music                 # References objectives/music.jinja
 
   chat-llm:
     model: gpt-4.1-mini
-    temperature: 0.3               # Slightly creative for engaging film discussion
+    temperature: 0.3               # Slightly creative for engaging music discussion
 ```
 
 #### Complete Example Summary
 
 | File | Purpose |
 |------|---------|
-| `prompts/objectives/discuss_films.jinja` | Defines the task: answering questions about films |
-| `prompts/personas/film_critic.jinja` | Defines the voice: enthusiastic cinema expert |
+| `prompts/objectives/music.jinja` | Defines the task: answering questions about music |
+| `prompts/personas/music-guide.jinja` | Defines the voice: enthusiastic music expert |
 | `ChatActions.java` (constructor) | Describes the RAG content for the LLM |
 | `application.yml` | Wires everything together |
 
@@ -734,3 +733,16 @@ ingest-directory output_dir/
 ```
 
 See the [docling documentation](https://ds4sd.github.io/docling/) for more options and advanced usage.
+
+## References
+
+### Embabel Agent Documentation
+
+- [Building a Chatbot](https://docs.embabel.com/embabel-agent/guide/0.3.3-SNAPSHOT/#building-a-chatbot) - Complete guide to creating chatbots with Embabel Agent
+- [Utility AI](https://docs.embabel.com/embabel-agent/guide/0.3.3-SNAPSHOT/#reference.planners__utility) - The utility pattern used in this demo for trigger-based actions
+- [RAG Reference](https://docs.embabel.com/embabel-agent/guide/0.3.3-SNAPSHOT/#reference.rag) - Retrieval-Augmented Generation with Embabel
+
+### GitHub Repositories
+
+- [embabel-agent](https://github.com/embabel/embabel-agent) - The core Embabel Agent framework
+- [java-agent-template](https://github.com/embabel/java-agent-template) - Template for starting new Embabel Agent projects

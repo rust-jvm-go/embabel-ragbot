@@ -47,33 +47,59 @@ public record JavelitChatUI(
     );
 
     /**
+     * Start the Javelit web server on the specified port.
+     */
+    public String start(int port) {
+        return start(port, true);
+    }
+
+    /**
      * Start the Javelit web server using the configured port.
      */
     public String start(boolean openBrowser) {
-        var port = properties.uiPort();
+        return start(properties.uiPort(), openBrowser);
+    }
+
+    /**
+     * Start the Javelit web server on the specified port.
+     */
+    public String start(int port, boolean openBrowser) {
         if (serverRef.get() != null) {
             return "Chat UI already running at http://localhost:" + port;
         }
 
-        // Resolve CSS file path for headersFile
-        var headersFilePath = resolveCssPath();
-        var serverBuilder = Server.builder(this::app, port);
-        if (headersFilePath != null) {
-            logger.info("Using custom CSS from: {}", headersFilePath);
-            serverBuilder.headersFile(headersFilePath);
+        logger.info("Starting Javelit Chat UI on port {}...", port);
+
+        try {
+            // Resolve CSS file path for headersFile
+            var headersFilePath = resolveCssPath();
+            logger.info("Building Javelit server on port {}", port);
+            var serverBuilder = Server.builder(this::app, port);
+            if (headersFilePath != null) {
+                logger.info("Using custom CSS from: {}", headersFilePath);
+                serverBuilder.headersFile(headersFilePath);
+            }
+            var server = serverBuilder.build();
+            logger.info("Starting Javelit server...");
+            server.start();
+            serverRef.set(server);
+
+            var url = "http://localhost:" + port;
+            logger.info("Javelit Chat UI started at {}", url);
+
+            // Give the server a moment to fully initialize
+            Thread.sleep(1000);
+
+            if (openBrowser) {
+                openInBrowser(url);
+            }
+
+            return url;
+        } catch (Exception e) {
+            logger.error("Failed to start Javelit Chat UI on port " + port, e);
+            serverRef.set(null);
+            throw new RuntimeException("Failed to start Chat UI: " + e.getMessage(), e);
         }
-        var server = serverBuilder.build();
-        server.start();
-        serverRef.set(server);
-
-        var url = "http://localhost:" + port;
-        logger.info("Javelit Chat UI started at {}", url);
-
-        if (openBrowser) {
-            openInBrowser(url);
-        }
-
-        return url;
     }
 
     /**
@@ -136,6 +162,16 @@ public record JavelitChatUI(
      */
     @SuppressWarnings("unchecked")
     private void app() {
+        logger.info("app() called - handling request");
+        try {
+            doApp();
+        } catch (Exception e) {
+            logger.error("Error in Javelit app", e);
+            Jt.error("Error: " + e.getMessage()).use();
+        }
+    }
+
+    private void doApp() {
         // Get or create session for this browser session
         var sessionState = Jt.sessionState();
 

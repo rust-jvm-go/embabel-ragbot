@@ -2,6 +2,7 @@ package com.embabel.examples.ragbot.javelit;
 
 import org.springframework.shell.standard.ShellComponent;
 import org.springframework.shell.standard.ShellMethod;
+import org.springframework.shell.standard.ShellOption;
 
 /**
  * Shell commands for the Javelit web-based chat UI.
@@ -10,12 +11,13 @@ import org.springframework.shell.standard.ShellMethod;
 public record JavelitShell(JavelitChatUI javelitChatUI) {
 
     @ShellMethod(value = "Launch web-based chat UI", key = "uichat")
-    public String uichat() {
+    public String uichat(
+            @ShellOption(defaultValue = "0", help = "Port number (0 uses default from config)") int port) {
         if (javelitChatUI.isRunning()) {
             return "Chat UI is already running. Use 'uichat-stop' to stop it first.";
         }
 
-        String url = javelitChatUI.start();
+        String url = port > 0 ? javelitChatUI.start(port) : javelitChatUI.start();
         return "Chat UI started at " + url + "\nOpen this URL in your browser to chat.";
     }
 

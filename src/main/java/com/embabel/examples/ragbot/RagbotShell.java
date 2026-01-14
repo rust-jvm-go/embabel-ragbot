@@ -35,7 +35,7 @@ record RagbotShell(LuceneSearchOperations luceneSearchOperations) {
                         uri
                 );
         return ingested != null ?
-                "Ingested document with ID: " + ingested :
+                "Ingested document with ID: " + ingested.getId() :
                 "Document already exists, no ingestion performed.";
     }
 

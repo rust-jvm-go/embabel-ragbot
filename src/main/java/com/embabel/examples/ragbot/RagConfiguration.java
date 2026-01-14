@@ -1,5 +1,6 @@
 package com.embabel.examples.ragbot;
 
+import com.embabel.agent.rag.ingestion.transform.AddTitlesChunkTransformer;
 import com.embabel.agent.rag.lucene.LuceneSearchOperations;
 import com.embabel.common.ai.model.DefaultModelSelectionCriteria;
 import com.embabel.common.ai.model.ModelProvider;
@@ -26,6 +27,8 @@ class RagConfiguration {
                 .withName("docs")
                 .withEmbeddingService(embeddingService)
                 .withChunkerConfig(properties.chunkerConfig())
+                // Add titles to chunks so we can distinguish sources during retrieval
+                .withChunkTransformer(AddTitlesChunkTransformer.INSTANCE)
                 .withIndexPath(Paths.get("./.lucene-index"))
                 .buildAndLoadChunks();
         logger.info("Loaded {} chunks into Lucene RAG store", luceneSearchOperations.info().getChunkCount());

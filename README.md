@@ -67,7 +67,7 @@ You can also run the main class, `com.embabel.examples.ragbot.RagShellApplicatio
 
 | Command                   | Description                                                                                                                                                                                                                                                   |
 |---------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `ingest [url]`            | Ingest a URL into the RAG store. Uses Apache Tika to parse content hierarchically and chunks it for vector storage. Default URL is the text of the recent Australia Social Media ban for under 16s. Documents are only ingested if they don't already exist.  |
+| `ingest [url]`            | Ingest a URL or file into the RAG store. Uses Apache Tika to parse content hierarchically and chunks it for vector storage. Defaults to Schumann's music criticism. Documents are only ingested if they don't already exist.  |
 | `ingest-directory <path>` | Ingest all markdown (`.md`) and text (`.txt`) files from a directory recursively. Useful for loading preprocessed content from docling or other sources.                                                                                                      |
 | `zap`                     | Clear all documents from the Lucene index. Returns the count of deleted documents.                                                                                                                                                                            |
 | `chunks`                  | Display all stored chunks with their IDs and content. Useful for debugging what content has been indexed.                                                                                                                                                     |
@@ -87,8 +87,11 @@ The `uichat` command launches a browser-based chat interface built with [Javelit
 # Start the shell
 ./scripts/shell.sh
 
-# Ingest a document
-ingest https://example.com/document
+# Ingest the default document (Schumann's music criticism)
+ingest
+
+# Or ingest Philip Hale's Boston Symphony program notes
+ingest https://www.gutenberg.org/files/56208/56208-h/56208-h.htm
 
 # View what was indexed
 chunks
@@ -513,6 +516,12 @@ chunks
 ```
 
 The `ingest-directory` command recursively processes all `.md` and `.txt` files in the specified directory, chunking them for vector storage.
+
+You can also ingest content directly from URLs. For example, to add Philip Hale's Boston Symphony program notes:
+
+```bash
+ingest https://www.gutenberg.org/files/56208/56208-h/56208-h.htm
+```
 
 #### Step 6: Configure application.yml
 

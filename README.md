@@ -53,6 +53,27 @@ The model configured in `application.yml` determines which key is required. The 
    chat
    ```
 
+### Why Old Music Criticism?
+
+While you can ingest any content into this RAG demo, the default content is historical music criticism: Robert Schumann's writings (1830s-1850s) and Philip Hale's Boston Symphony program notes (early 1900s). This choice is deliberate: **obscure historical content ensures the LLM must actually use RAG** rather than relying on general knowledge.
+
+If you ingested Wikipedia articles about Python or common tech topics, the LLM could answer most questions from its training data alone, making it hard to verify that RAG is working. With Schumann's opinions on Chopin's nocturnes or Hale's commentary on Meyerbeer, the LLM has no choice but to search the indexed content - giving you clear evidence that retrieval is happening.
+
+**Example questions to try:**
+
+```
+# Single-source questions
+What did Schumann think about Liszt?
+What did Philip Hale think about Liszt?
+What does Schumann say about Chopin's nocturnes?
+
+# Cross-source comparison (requires ingesting both sources)
+Compare Hale and Schumann's opinions of Liszt
+How do the two critics differ in their assessment of virtuosity?
+```
+
+These questions demonstrate agentic RAG in action - the LLM will make multiple searches, synthesize information across chunks, and cite specific passages from the criticism.
+
 ## Usage
 
 Run the shell script to start Embabel under Spring Shell:
@@ -141,76 +162,112 @@ ragbot:
 
 ## Implementation
 
-### Architecture Overview
+### Chatbot with Utility Actions
 
+The chatbot uses Embabel's **utility pattern** - a streamlined approach where `@Action` methods respond to conversation events without complex goal planning. This is ideal for chatbots where the flow is straightforward: user sends message → system responds.
+
+```mermaid
+flowchart TB
+    subgraph Shell["🖥️ Spring Shell"]
+        CMD["chat command"]
+        USER["User Message"]
+    end
+
+    subgraph Agent["🤖 AgentProcess"]
+        TRIGGER["Event Trigger<br/>UserMessage.class"]
+        ACTION["@Action<br/>ChatActions.respond()"]
+    end
+
+    subgraph AI["✨ Ai Interface"]
+        TEMPLATE["Jinja Template<br/>ragbot.jinja"]
+        TOOLS["Tool Definitions<br/>ToolishRag"]
+        LLM_CALL["LLM Request"]
+    end
+
+    subgraph Response["💬 Response"]
+        ASSIST["Assistant Message"]
+        SEND["sendMessage()"]
+    end
+
+    CMD --> TRIGGER
+    USER --> TRIGGER
+    TRIGGER -->|"triggers"| ACTION
+    ACTION -->|"context.ai()"| TEMPLATE
+    TEMPLATE --> TOOLS
+    TOOLS --> LLM_CALL
+    LLM_CALL -->|"LLM response"| ASSIST
+    ASSIST --> SEND
+    SEND -->|"back to user"| Shell
+
+    style Shell fill:#d4eeff,stroke:#63c0f5,color:#1e1e1e
+    style Agent fill:#e8dcf4,stroke:#9f77cd,color:#1e1e1e
+    style AI fill:#fff3cd,stroke:#e9b306,color:#1e1e1e
+    style Response fill:#d4f5d4,stroke:#3fd73c,color:#1e1e1e
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              Spring Shell                                   │
-│                                                                             │
-│   > chat                                                                    │
-│   > What penalties apply to social media platforms?                         │
-└─────────────────────────────────────┬───────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                             AgentProcess                                    │
-│                                                                             │
-│   Starts when chat begins. Manages conversation state and action dispatch.  │
-│   Listens for triggers (UserMessage) and invokes matching @Action methods.  │
-└─────────────────────────────────────┬───────────────────────────────────────┘
-                                      │ UserMessage triggers
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                     @Action: ChatActions.respond()                          │
-│                                                                             │
-│   Fired on each user message. Uses Ai interface to build request:           │
-│     context.ai()                                                            │
-│         .withLlm(...)                                                       │
-│         .withReference(toolishRag)  ◄── ToolishRag added as LLM tool        │
-│         .withTemplate("ragbot")                                             │
-│         .respondWithSystemPrompt(conversation, ...)                         │
-└─────────────────────────────────────┬───────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            Ai Interface                                     │
-│                                                                             │
-│   • Renders system prompt from Jinja template                               │
-│   • Packages ToolishRag as tool definition for LLM                          │
-│   • Sends request to LLM provider (OpenAI / Anthropic)                      │
-└─────────────────────────────────────┬───────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         LLM (GPT / Claude)                                  │
-│                                                                             │
-│   Receives prompt + tool definitions. Decides to call tools as needed:      │
-│                                                                             │
-│   "I need to search for penalty information..."                             │
-│         │                                                                   │
-│         ▼                                                                   │
-│   ┌─────────────────────────────────────────────────────────────────────┐   │
-│   │  Tool Call: vectorSearch("penalties social media platforms")        │   │
-│   └─────────────────────────────────┬───────────────────────────────────┘   │
-│                                     │                                       │
-└─────────────────────────────────────┼───────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    ToolishRag → LuceneSearchOperations                      │
-│                                                                             │
-│   • Converts query to embedding vector                                      │
-│   • Searches ./.lucene-index for similar chunks                             │
-│   • Returns relevant content to LLM                                         │
-└─────────────────────────────────────┬───────────────────────────────────────┘
-                                      │
-                                      ▼
-                        LLM generates final response
-                        using retrieved context
-                                      │
-                                      ▼
-                           Response sent to user
+
+**Key Concepts:**
+
+- **Utility Pattern**: `AgentProcessChatbot.utilityFromPlatform()` creates a chatbot that auto-discovers `@Action` methods
+- **Trigger-based**: `@Action(trigger = UserMessage.class)` fires on each user message
+- **Fluent AI Builder**: `context.ai().withLlm(...).withReference(toolishRag).withTemplate(...)` builds the request
+
+### Agentic RAG
+
+The RAG system is **agentic** - the LLM autonomously decides when and how to search, potentially making multiple tool calls to gather comprehensive information before responding.
+
+```mermaid
+flowchart TB
+    subgraph Query["❓ User Query"]
+        Q["What did Schumann think<br/>about Chopin's nocturnes?"]
+    end
+
+    subgraph LLM["🧠 LLM Reasoning"]
+        THINK1["I need to find Schumann's<br/>views on Chopin..."]
+        THINK2["Let me search for more<br/>specific nocturne references..."]
+        THINK3["Now I can synthesize<br/>a complete answer"]
+    end
+
+    subgraph Tools["🔧 ToolishRag"]
+        SEARCH1["vectorSearch(<br/>'Schumann Chopin')"]
+        SEARCH2["vectorSearch(<br/>'Chopin nocturnes review')"]
+    end
+
+    subgraph RAG["📚 LuceneSearchOperations"]
+        EMBED["Embed Query"]
+        VECTOR["Vector Search<br/>.lucene-index"]
+        CHUNKS["Return Chunks"]
+    end
+
+    subgraph Answer["✅ Final Response"]
+        SYNTH["Synthesize from<br/>retrieved context"]
+        RESP["Comprehensive<br/>answer with citations"]
+    end
+
+    Q --> THINK1
+    THINK1 -->|"tool call"| SEARCH1
+    SEARCH1 --> EMBED
+    EMBED --> VECTOR
+    VECTOR --> CHUNKS
+    CHUNKS -->|"results"| THINK2
+    THINK2 -->|"follow-up search"| SEARCH2
+    SEARCH2 --> RAG
+    RAG -->|"more results"| THINK3
+    THINK3 --> SYNTH
+    SYNTH --> RESP
+
+    style Query fill:#d4eeff,stroke:#63c0f5,color:#1e1e1e
+    style LLM fill:#e8dcf4,stroke:#9f77cd,color:#1e1e1e
+    style Tools fill:#fff3cd,stroke:#e9b306,color:#1e1e1e
+    style RAG fill:#fafafa,stroke:#9f77cd,color:#1e1e1e
+    style Answer fill:#d4f5d4,stroke:#3fd73c,color:#1e1e1e
 ```
+
+**Agentic Capabilities:**
+
+1. **Autonomous Search**: LLM decides when to call `vectorSearch()` based on the question
+2. **Iterative Refinement**: Can make multiple searches, using results to inform follow-up queries
+3. **Context Synthesis**: Combines information from multiple chunks into coherent responses
+4. **Citation Awareness**: References specific sources from the retrieved content
 
 **Flow Summary:**
 
@@ -218,10 +275,11 @@ ragbot:
 2. User sends a message → triggers `@Action(trigger = UserMessage.class)`
 3. **ChatActions.respond()** builds request via **Ai** interface, adding **ToolishRag** with `.withReference()`
 4. **Ai** packages prompt + tool definitions, sends to LLM
-5. **LLM** decides to call a **ToolishRag** tool to search for relevant content
+5. **LLM** autonomously decides to call **ToolishRag** tools to search for relevant content
 6. The **ToolishRag** tool queries Lucene index, returns matching chunks to LLM
-7. **LLM** generates response using retrieved context → sent back to user
-8. Loop continues for each new message until user exits
+7. **LLM** may make additional searches based on initial results
+8. **LLM** generates response using all retrieved context → sent back to user
+9. Loop continues for each new message until user exits
 
 ### RAG Configuration
 

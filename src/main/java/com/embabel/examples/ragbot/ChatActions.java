@@ -42,7 +42,7 @@ public class ChatActions {
                 ai()
                 .withLlm(properties.chatLlm())
                 .withReference(toolishRag)
-                .withTemplate("ragbot")
+                .rendering("ragbot")
                 .respondWithSystemPrompt(conversation, Map.of(
                         "properties", properties,
                         "voice", properties.voice(),

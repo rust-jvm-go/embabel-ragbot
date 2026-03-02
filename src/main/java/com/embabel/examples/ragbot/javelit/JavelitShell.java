@@ -5,11 +5,22 @@ import org.springframework.shell.standard.ShellMethod;
 import org.springframework.shell.standard.ShellOption;
 
 /**
- * Shell commands for the Javelit web-based chat UI.
+ * Exposes Spring Shell commands for controlling the Javelit browser chat interface.
+ * <p>
+ * This class acts as a thin adapter around {@link JavelitChatUI}, exposing
+ * start/stop/status operations as easy-to-discover shell commands.
+ *
+ * @param javelitChatUI runtime component that manages the embedded web server
  */
 @ShellComponent
 public record JavelitShell(JavelitChatUI javelitChatUI) {
 
+    /**
+     * Starts the chat web UI.
+     *
+     * @param port requested HTTP port; {@code 0} means use configured default
+     * @return Returns startup message including the URL to open in a browser
+     */
     @ShellMethod(value = "Launch web-based chat UI", key = "uichat")
     public String uichat(
             @ShellOption(defaultValue = "0", help = "Port number (0 uses default from config)") int port) {
@@ -21,6 +32,11 @@ public record JavelitShell(JavelitChatUI javelitChatUI) {
         return "Chat UI started at " + url + "\nOpen this URL in your browser to chat.";
     }
 
+    /**
+     * Stops the running chat web UI, if present.
+     *
+     * @return Returns status message indicating whether the UI was stopped or already inactive
+     */
     @ShellMethod(value = "Stop the web-based chat UI", key = "uichat-stop")
     public String uichatStop() {
         if (!javelitChatUI.isRunning()) {
@@ -31,6 +47,11 @@ public record JavelitShell(JavelitChatUI javelitChatUI) {
         return "Chat UI stopped.";
     }
 
+    /**
+     * Reports whether the web chat UI is currently running.
+     *
+     * @return Returns user-friendly running status text
+     */
     @ShellMethod(value = "Check if web-based chat UI is running", key = "uichat-status")
     public String uichatStatus() {
         if (javelitChatUI.isRunning()) {

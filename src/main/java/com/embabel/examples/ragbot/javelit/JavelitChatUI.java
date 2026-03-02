@@ -27,8 +27,16 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Javelit-based web UI for the RAG chatbot.
- * Provides a browser-based chat interface as an alternative to the shell.
+ * Provides a Javelit-based web UI for the RAG chatbot.
+ * <p>
+ * This record provides a browser-based chat interface as an alternative to
+ * Spring Shell.
+ * The UI keeps a per-browser-session {@link ChatSession}, sends user messages to
+ * the shared {@link Chatbot}, and renders assistant responses from an in-memory queue.
+ *
+ * @param chatbot chatbot facade that routes messages into Embabel actions
+ * @param properties application settings (voice, objective, UI port, CSS path)
+ * @param searchOperations search store used for showing live RAG statistics
  */
 @Component
 public record JavelitChatUI(
@@ -36,9 +44,19 @@ public record JavelitChatUI(
         RagbotProperties properties,
         LuceneSearchOperations searchOperations
 ) {
+    /**
+     * Logger for server lifecycle and request-level diagnostics.
+     */
     private static final Logger logger = LoggerFactory.getLogger(JavelitChatUI.class);
+
+    /**
+     * Singleton reference to the running embedded server, if started.
+     */
     private static final AtomicReference<Server> serverRef = new AtomicReference<>();
 
+    /**
+     * Synthetic user used for browser-based chat sessions when no real identity is available.
+     */
     private static final User ANONYMOUS_USER = new SimpleUser(
             "anonymous",
             "Anonymous User",
@@ -47,21 +65,35 @@ public record JavelitChatUI(
     );
 
     /**
-     * Start the Javelit web server on the specified port.
+     * Starts the web chat UI on a specific port and opens a browser window.
+     *
+     * @param port port number to bind the embedded Javelit server to
+     * @return Returns URL of the started UI, for example {@code http://localhost:8888}
      */
     public String start(int port) {
         return start(port, true);
     }
 
     /**
-     * Start the Javelit web server using the configured port.
+     * Starts the web chat UI using the configured default port.
+     *
+     * @param openBrowser whether to attempt opening the default browser automatically
+     * @return Returns URL of the started UI
      */
     public String start(boolean openBrowser) {
         return start(properties.uiPort(), openBrowser);
     }
 
     /**
-     * Start the Javelit web server on the specified port.
+     * Starts the web chat UI with explicit control over port and browser behavior.
+     * <p>
+     * Best practice: this method enforces single-server startup by checking
+     * {@link #serverRef} first, preventing accidental duplicate server instances.
+     *
+     * @param port port number to bind
+     * @param openBrowser whether to try opening the UI URL in the desktop browser
+     * @return Returns URL of the running UI or existing instance message
+     * @throws RuntimeException if server startup fails
      */
     public String start(int port, boolean openBrowser) {
         if (serverRef.get() != null) {
@@ -103,12 +135,22 @@ public record JavelitChatUI(
     }
 
     /**
-     * Start the Javelit web server and open browser.
+     * Starts the UI on the configured port and opens the browser.
+     *
+     * @return Returns URL of the running UI
      */
     public String start() {
         return start(true);
     }
 
+    /**
+     * Tries to open a URL in the system browser.
+     * <p>
+     * The implementation first uses Java's Desktop API and then falls back to
+     * platform-specific commands ({@code open}, {@code start}, {@code xdg-open}).
+     *
+     * @param url url to open
+     */
     private void openInBrowser(String url) {
         try {
             // Try Desktop API first
@@ -140,7 +182,7 @@ public record JavelitChatUI(
     }
 
     /**
-     * Stop the Javelit web server.
+     * Stops the running UI server if one exists.
      */
     public void stop() {
         var server = serverRef.getAndSet(null);
@@ -151,14 +193,19 @@ public record JavelitChatUI(
     }
 
     /**
-     * Check if the server is running.
+     * Indicates whether the UI server is currently running.
+     *
+     * @return Returns {@code true} when a server instance is active; otherwise {@code false}
      */
     public boolean isRunning() {
         return serverRef.get() != null;
     }
 
     /**
-     * The Javelit app definition - runs on each user interaction.
+     * Entry point for each HTTP interaction handled by Javelit.
+     * <p>
+     * This wrapper centralizes exception handling so the browser receives a friendly
+     * error instead of an unhandled stack trace.
      */
     @SuppressWarnings("unchecked")
     private void app() {
@@ -171,6 +218,16 @@ public record JavelitChatUI(
         }
     }
 
+    /**
+     * Renders the chat page and processes user input for the current browser session.
+     * <p>
+     * Session state keys used:
+     * <ul>
+     *     <li>{@code displayHistory}: ordered messages rendered in the UI.</li>
+     *     <li>{@code chatSession}: Embabel chat session used to send/receive messages.</li>
+     *     <li>{@code responseQueue}: queue receiving assistant messages from output channel.</li>
+     * </ul>
+     */
     private void doApp() {
         // Get or create session for this browser session
         var sessionState = Jt.sessionState();
@@ -266,6 +323,14 @@ public record JavelitChatUI(
         Jt.markdown("_Powered by Embabel Agent with RAG_").key("footer-text").use();
     }
 
+    /**
+     * Resolves configured CSS resource to a filesystem path for Javelit's headers file.
+     * <p>
+     * If the configured resource cannot be accessed as a regular file (common for
+     * classpath resources inside jars), this method copies it to a temporary file.
+     *
+     * @return Returns absolute path to a CSS file, or {@code null} if resolution fails
+     */
     private String resolveCssPath() {
         try {
             var resource = new DefaultResourceLoader().getResource(properties.uiCssPath());
@@ -292,8 +357,16 @@ public record JavelitChatUI(
 
     /**
      * OutputChannel that queues assistant messages for retrieval.
+     *
+     * @param queue per-session queue where assistant messages are buffered for the UI
      */
     private record QueueingOutputChannel(BlockingQueue<Message> queue) implements OutputChannel {
+
+        /**
+         * Handles output events and enqueues assistant messages for later rendering.
+         *
+         * @param event output event emitted by the chatbot runtime
+         */
         @Override
         public void send(OutputChannelEvent event) {
             if (event instanceof MessageOutputChannelEvent msgEvent) {

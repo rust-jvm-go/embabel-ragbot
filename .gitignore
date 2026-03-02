@@ -8,8 +8,10 @@ docs/embabel-agent-guide.html
 */*/target/**
 */*/*/target/**
 
-.idea/**
+.idea/**/*
 *.iml
+
+.vscode/**/*
 
 .claude
 

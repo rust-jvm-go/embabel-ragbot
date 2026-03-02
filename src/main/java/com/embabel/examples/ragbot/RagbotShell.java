@@ -11,9 +11,30 @@ import org.springframework.shell.standard.ShellOption;
 
 import java.nio.file.Path;
 
+/**
+ * Exposes Spring Shell commands for ingestion, inspection, and maintenance of the local RAG store.
+ * <p>
+ * This record is intentionally thin: each command delegates to
+ * {@link LuceneSearchOperations} and related Embabel ingestion helpers.
+ * Keeping shell commands simple is a good practice because it makes behavior easy
+ * to test and easy to reuse from other interfaces.
+ *
+ * @param luceneSearchOperations search/index component backed by Lucene and
+ *                               shared by chat and ingestion
+ */
 @ShellComponent
 record RagbotShell(LuceneSearchOperations luceneSearchOperations) {
 
+    /**
+     * Ingests a single URL or file into the RAG store.
+     * <p>
+     * If the input is a local file path, it is normalized to an absolute file URI
+     * before ingestion. If the path is a directory, this command returns a friendly
+     * message guiding the user to {@link #ingestDirectory(String)}.
+     *
+     * @param location url or local file path to ingest
+     * @return Returns ingestion outcome including document id or skip reason
+     */
     @ShellMethod("Ingest URL or file path: Ingests Schumann's music criticism by default")
     String ingest(@ShellOption(
             help = "URL or file path to ingest",
@@ -39,6 +60,16 @@ record RagbotShell(LuceneSearchOperations luceneSearchOperations) {
                 "Document already exists, no ingestion performed.";
     }
 
+    /**
+     * Ingests all files in a local directory into the RAG store.
+     * <p>
+     * Best practice for learning projects: keep validation close to user input
+     * (existence checks, file-vs-directory checks) so failure modes are clear and
+     * easy to debug from the command line.
+     *
+     * @param directoryPath local directory containing files to ingest
+     * @return Returns summary of how many files produced newly ingested documents
+     */
     @ShellMethod("Ingest a directory of files")
     String ingestDirectory(@ShellOption(
             help = "Directory path to ingest",
@@ -85,12 +116,22 @@ record RagbotShell(LuceneSearchOperations luceneSearchOperations) {
         return "Ingested " + ingestedCount + " documents from directory: " + dirUri;
     }
 
+    /**
+     * Deletes all indexed documents and chunks from the Lucene store.
+     *
+     * @return Returns confirmation message with number of deleted documents
+     */
     @ShellMethod("clear all documents")
     String zap() {
         var count = luceneSearchOperations.clear();
         return "All %d documents deleted".formatted(count);
     }
 
+    /**
+     * Prints all chunks and metadata currently stored in the index.
+     *
+     * @return Returns total chunk count after listing details to the console
+     */
     @ShellMethod("show chunks")
     String chunks() {
         var chunks = luceneSearchOperations.findAll();
@@ -103,6 +144,11 @@ record RagbotShell(LuceneSearchOperations luceneSearchOperations) {
         return "\n\nTotal chunks: " + chunks.size();
     }
 
+    /**
+     * Prints all indexed {@link Section} records.
+     *
+     * @return Returns total section count after listing section ids and titles
+     */
     @ShellMethod("show sections")
     String sections() {
         var sections = luceneSearchOperations.findAll(Section.class);
@@ -114,6 +160,11 @@ record RagbotShell(LuceneSearchOperations luceneSearchOperations) {
         return "\n\nTotal sections: " + sections.size();
     }
 
+    /**
+     * Prints all indexed {@link ContentElement} instances.
+     *
+     * @return Returns total content element count after listing identifiers and types
+     */
     @ShellMethod("show content elements")
     String contentElements() {
         var contentElements = luceneSearchOperations.findAll(ContentElement.class);
@@ -125,6 +176,11 @@ record RagbotShell(LuceneSearchOperations luceneSearchOperations) {
         return "\n\nTotal content elements: " + contentElements.size();
     }
 
+    /**
+     * Shows high-level diagnostics for the Lucene store.
+     *
+     * @return Returns textual stats including document and chunk counts
+     */
     @ShellMethod("show lucene info: number of documents etc.")
     String info() {
         var info = luceneSearchOperations.info();

@@ -11,14 +11,37 @@ import com.embabel.chat.UserMessage;
 import java.util.Map;
 
 /**
- * The platform can use any action to respond to user messages.
+ * Defines chat-focused Embabel actions that the utility chatbot can invoke.
+ * <p>
+ * In this project, a chatbot is not implemented as a giant "chat loop" method.
+ * Instead, Embabel discovers {@link Action}-annotated methods on
+ * {@link EmbabelComponent} classes and runs them when their trigger matches.
+ * This class contributes one such action: respond to each {@link UserMessage}
+ * using a retrieval-enabled prompt.
  */
 @EmbabelComponent
 public class ChatActions {
 
+    /**
+     * RAG facade exposed to the LLM as a safe, high-level reference named "sources".
+     */
     private final ToolishRag toolishRag;
+
+    /**
+     * Runtime configuration bound from {@code ragbot.*} properties.
+     */
     private final RagbotProperties properties;
 
+    /**
+     * Creates action handlers and wires retrieval capabilities.
+     * <p>
+     * Best practice: keep retrieval setup in the constructor so action methods remain
+     * focused on orchestration (input -> AI call -> output), making them easier to read
+     * and test.
+     *
+     * @param searchOperations vector and metadata search abstraction used by {@link ToolishRag}
+     * @param properties application-level chatbot configuration
+     */
     public ChatActions(
             SearchOperations searchOperations,
             RagbotProperties properties) {
@@ -29,6 +52,16 @@ public class ChatActions {
         this.properties = properties;
     }
 
+    /**
+     * Responds to an incoming user message using the configured LLM and RAG reference.
+     * <p>
+     * The method is package-private on purpose: visibility does not affect Embabel's
+     * ability to discover and invoke {@link Action} methods, but narrower visibility
+     * keeps the API surface small.
+     *
+     * @param conversation current conversation containing prior user/assistant messages
+     * @param context action execution context used to call AI and publish the new message
+     */
     @Action(
             canRerun = true,
             trigger = UserMessage.class

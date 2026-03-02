@@ -18,9 +18,19 @@ package com.embabel.examples.ragbot;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-
+/**
+ * Bootstraps the Ragbot learning application.
+ * <p>
+ * This class bootstraps the Spring context. Chatbot behavior is assembled from
+ * discovered beans such as Embabel actions and configuration classes.
+ */
 @SpringBootApplication
 class RagbotApplication {
+    /**
+     * Starts the application.
+     *
+     * @param args command-line arguments passed to Spring Boot
+     */
     public static void main(String[] args) {
         SpringApplication.run(RagbotApplication.class, args);
     }

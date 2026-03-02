@@ -12,12 +12,42 @@ import org.springframework.context.annotation.Configuration;
 
 import java.nio.file.Paths;
 
+/**
+ * Configures retrieval infrastructure used by the chatbot.
+ * <p>
+ * This class wires a {@link LuceneSearchOperations} bean, which stores embeddings
+ * and searchable chunks on local disk. The bean is shared by ingestion commands,
+ * RAG tools, and UI status screens.
+ */
 @Configuration
 @EnableConfigurationProperties(RagbotProperties.class)
 class RagConfiguration {
 
+    /**
+     * Logger used for lifecycle and indexing diagnostics.
+     */
     private final Logger logger = LoggerFactory.getLogger(RagConfiguration.class);
 
+    /**
+     * Creates and initializes the Lucene-backed RAG store.
+     * <p>
+     * Best practices applied here:
+     * <ul>
+     *     <li>
+     *         Choose embeddings through {@link ModelProvider} so model selection
+     *         stays centralized.
+     *     </li>
+     *     <li>
+     *         Use a configured chunking strategy from {@link RagbotProperties}
+     *         for reproducible indexing.
+     *     </li>
+     *     <li>Persist the index to disk so data survives application restarts.</li>
+     * </ul>
+     *
+     * @param modelProvider source for embedding service instances
+     * @param properties application configuration, including chunking settings
+     * @return Returns initialized Lucene search operations ready for ingestion and retrieval
+     */
     @Bean
     LuceneSearchOperations luceneSearchOperations(
             ModelProvider modelProvider,
@@ -34,5 +64,4 @@ class RagConfiguration {
         logger.info("Loaded {} chunks into Lucene RAG store", luceneSearchOperations.info().getChunkCount());
         return luceneSearchOperations;
     }
-
 }

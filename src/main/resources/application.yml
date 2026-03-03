@@ -1,18 +1,22 @@
 ragbot:
+  # RAG chunking settings
   chunker-config:
-    max-chunk-size: 800
-    overlap-size: 100
-    embedding-batch-size: 200
+    max-chunk-size: 800        # Maximum characters per chunk
+    overlap-size: 100          # Overlap between chunks for context continuity
+    embedding-batch-size: 200  # Size sent to the embedding model per batch processing
 
+  # LLM model selection and hyperparameters
   chat-llm:
-    model: kimi-k2.5:cloud
-    temperature: 0.0
+    model: kimi-k2.5:cloud  # Model to use for chat responses
+    temperature: 0.5        # 0.0 = deterministic, higher = more creative
 
+  # Voice controls HOW the chatbot communicates
   voice:
-    persona: music-guide
-    max-words: 250
+    persona: music-guide  # Which persona template to use (personas/*.jinja)
+    max-words: 250        # Hint for response length
 
-  objective: music
+  # Objective controls WHAT the chatbot accomplishes
+  objective: music  # Which objective template to use (objectives/*.jinja)
 
 spring:
   ai:
@@ -23,19 +27,14 @@ spring:
       base-url: http://localhost:11434
 
 embabel:
-
   agent:
-
     shell:
       # If true, redirects logging to logs/chat-session.log rather than console during chat
       redirect-log-to-file: true
     logging:
       personality: colossus
 
-
   models:
-
     # Change this to use a non-Open AI default LLM
     default-llm: kimi-k2.5:cloud
-
     default-embedding-model: qwen3-embedding:0.6b

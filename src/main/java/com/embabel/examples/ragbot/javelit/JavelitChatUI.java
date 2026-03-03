@@ -33,6 +33,8 @@ import java.util.concurrent.atomic.AtomicReference;
  * Spring Shell.
  * The UI keeps a per-browser-session {@link ChatSession}, sends user messages to
  * the shared {@link Chatbot}, and renders assistant responses from an in-memory queue.
+ * Because it reuses the same {@link Chatbot} bean as shell commands, behavior
+ * remains consistent across text and browser interactions.
  *
  * @param chatbot chatbot facade that routes messages into Embabel actions
  * @param properties application settings (voice, objective, UI port, CSS path)
@@ -76,6 +78,9 @@ public record JavelitChatUI(
 
     /**
      * Starts the web chat UI using the configured default port.
+     * <p>
+     * This is the path used by the {@code uichat} shell command when no port is
+     * provided explicitly.
      *
      * @param openBrowser whether to attempt opening the default browser automatically
      * @return Returns URL of the started UI
@@ -227,6 +232,8 @@ public record JavelitChatUI(
      *     <li>{@code chatSession}: Embabel chat session used to send/receive messages.</li>
      *     <li>{@code responseQueue}: queue receiving assistant messages from output channel.</li>
      * </ul>
+     * The page also surfaces configured objective/persona values and current RAG
+     * store stats so users can see response context while chatting.
      */
     private void doApp() {
         // Get or create session for this browser session

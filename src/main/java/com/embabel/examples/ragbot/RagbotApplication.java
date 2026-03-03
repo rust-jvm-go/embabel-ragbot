@@ -23,9 +23,20 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * <p>
  * This class bootstraps the Spring context. Chatbot behavior is assembled from
  * discovered beans such as Embabel actions and configuration classes.
+ * The default runtime experience is Spring Shell for ingestion and chat commands,
+ * with an optional browser UI started from shell commands when desired.
  */
 @SpringBootApplication
 class RagbotApplication {
+
+    /**
+     * Creates the application bootstrap class.
+     * <p>
+     * Spring uses this type as the primary source for component scanning and startup configuration.
+     */
+    RagbotApplication() {
+    }
+
     /**
      * Starts the application.
      *

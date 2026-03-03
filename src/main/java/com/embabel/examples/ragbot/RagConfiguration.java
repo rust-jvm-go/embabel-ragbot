@@ -18,10 +18,20 @@ import java.nio.file.Paths;
  * This class wires a {@link LuceneSearchOperations} bean, which stores embeddings
  * and searchable chunks on local disk. The bean is shared by ingestion commands,
  * RAG tools, and UI status screens.
+ * In this architecture, {@link LuceneSearchOperations} is the concrete
+ * {@code SearchOperations} backend consumed by {@code ToolishRag}.
  */
 @Configuration
 @EnableConfigurationProperties(RagbotProperties.class)
 class RagConfiguration {
+
+    /**
+     * Creates the retrieval configuration bean container.
+     * <p>
+     * Spring instantiates this configuration class during context startup.
+     */
+    RagConfiguration() {
+    }
 
     /**
      * Logger used for lifecycle and indexing diagnostics.
@@ -40,6 +50,10 @@ class RagConfiguration {
      *     <li>
      *         Use a configured chunking strategy from {@link RagbotProperties}
      *         for reproducible indexing.
+     *     </li>
+     *     <li>
+     *         Add section titles to chunks to improve source attribution in
+     *         retrieval-grounded responses.
      *     </li>
      *     <li>Persist the index to disk so data survives application restarts.</li>
      * </ul>

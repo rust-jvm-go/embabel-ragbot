@@ -18,6 +18,8 @@ import java.nio.file.Path;
  * {@link LuceneSearchOperations} and related Embabel ingestion helpers.
  * Keeping shell commands simple is a good practice because it makes behavior easy
  * to test and easy to reuse from other interfaces.
+ * In the learning flow described for this project, shell commands are the primary
+ * way to ingest content first, then chat against the persisted index.
  *
  * @param luceneSearchOperations search/index component backed by Lucene and
  *                               shared by chat and ingestion
@@ -31,6 +33,8 @@ record RagbotShell(LuceneSearchOperations luceneSearchOperations) {
      * If the input is a local file path, it is normalized to an absolute file URI
      * before ingestion. If the path is a directory, this command returns a friendly
      * message guiding the user to {@link #ingestDirectory(String)}.
+     * Content extraction is delegated to {@link TikaHierarchicalContentReader},
+     * which handles common formats such as HTML, PDF, and office documents.
      *
      * @param location url or local file path to ingest
      * @return Returns ingestion outcome including document id or skip reason
@@ -66,6 +70,8 @@ record RagbotShell(LuceneSearchOperations luceneSearchOperations) {
      * Best practice for learning projects: keep validation close to user input
      * (existence checks, file-vs-directory checks) so failure modes are clear and
      * easy to debug from the command line.
+     * This command is useful for bulk indexing before interactive chat sessions,
+     * where retrieval should remain grounded in project-specific source content.
      *
      * @param directoryPath local directory containing files to ingest
      * @return Returns summary of how many files produced newly ingested documents

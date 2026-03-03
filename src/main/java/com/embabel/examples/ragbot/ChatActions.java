@@ -16,14 +16,18 @@ import java.util.Map;
  * In this project, a chatbot is not implemented as a giant "chat loop" method.
  * Instead, Embabel discovers {@link Action}-annotated methods on
  * {@link EmbabelComponent} classes and runs them when their trigger matches.
- * This class contributes one such action: respond to each {@link UserMessage}
- * using a retrieval-enabled prompt.
+ * This class contributes one such action: respond to each {@link UserMessage}.
+ * The model can call retrieval tools via {@link ToolishRag}, enabling agentic
+ * retrieval rather than a fixed retrieve-then-generate pipeline.
  */
 @EmbabelComponent
 public class ChatActions {
 
     /**
      * RAG facade exposed to the LLM as a safe, high-level reference named "sources".
+     * <p>
+     * Internally this facade wraps {@link SearchOperations} and exposes tool-style
+     * retrieval operations that the model can invoke when needed.
      */
     private final ToolishRag toolishRag;
 
@@ -39,7 +43,8 @@ public class ChatActions {
      * focused on orchestration (input -> AI call -> output), making them easier to read
      * and test.
      *
-     * @param searchOperations vector and metadata search abstraction used by {@link ToolishRag}
+     * @param searchOperations vector and metadata search abstraction consumed by
+     *                         {@link ToolishRag}
      * @param properties application-level chatbot configuration
      */
     public ChatActions(
@@ -58,6 +63,9 @@ public class ChatActions {
      * The method is package-private on purpose: visibility does not affect Embabel's
      * ability to discover and invoke {@link Action} methods, but narrower visibility
      * keeps the API surface small.
+     * The {@code trigger = UserMessage.class} setting runs this action whenever a
+     * user message arrives, and {@code canRerun = true} allows repeated execution
+     * over the same long-lived conversation.
      *
      * @param conversation current conversation containing prior user/assistant messages
      * @param context action execution context used to call AI and publish the new message

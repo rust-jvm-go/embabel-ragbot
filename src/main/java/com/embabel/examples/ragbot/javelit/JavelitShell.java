@@ -9,6 +9,8 @@ import org.springframework.shell.standard.ShellOption;
  * <p>
  * This class acts as a thin adapter around {@link JavelitChatUI}, exposing
  * start/stop/status operations as easy-to-discover shell commands.
+ * In the documented learning flow, users typically run shell ingestion commands
+ * first, then launch this UI with {@code uichat} for interactive conversations.
  *
  * @param javelitChatUI runtime component that manages the embedded web server
  */
@@ -17,6 +19,9 @@ public record JavelitShell(JavelitChatUI javelitChatUI) {
 
     /**
      * Starts the chat web UI.
+     * <p>
+     * Passing {@code 0} keeps startup aligned with configuration defaults
+     * (commonly port 8888 in this project).
      *
      * @param port requested HTTP port; {@code 0} means use configured default
      * @return Returns startup message including the URL to open in a browser

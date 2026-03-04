@@ -680,7 +680,7 @@ No code changes required - just restart the application.
 
 ## Preprocessing with docling
 
-[Docling](https://ds4sd.github.io/docling/) is a document conversion tool that excels at converting complex formats (PDF, Word, HTML, PowerPoint) to clean markdown. This is useful when source documents don't parse well with standard tools.
+[Docling](https://www.docling.ai) is a document conversion tool that excels at converting complex formats (PDF, Word, HTML, PowerPoint) to clean markdown. This is useful when source documents don't parse well with standard tools.
 
 **Note:** Docling can be slow, especially for large or complex documents. Plan accordingly.
 
@@ -731,7 +731,7 @@ After converting to markdown, use `ingest-directory` to load the cleaned content
 ingest-directory output_dir/
 ```
 
-See the [docling documentation](https://ds4sd.github.io/docling/) for more options and advanced usage.
+See the [Docling documentation](https://docling-project.github.io/docling/) for more options and advanced usage.
 
 ## References
 
